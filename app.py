@@ -81,6 +81,28 @@ def parse_timestamp(timestamp_str):
     formatted_timestamp = timestamp.strftime("%Y/%m/%d at %H:%M GMT")
     return formatted_timestamp
 
+def parse_wind_and_temperature(data_list):
+    wind_info = None
+    temperature_info = None
+    
+    for line in data_list:
+        if line.endswith('KT'):
+            wind_info = line
+        elif '/' in line:
+            temperature_info = line
+    
+    if wind_info:
+        wind = parse_wind(wind_info) 
+    else:
+        wind = "Wind data not available"
+    
+    if temperature_info:
+        temperature = parse_temperature(temperature_info) 
+    else:
+        temperature = "Temperature data not available"
+    
+    return wind, temperature
+
 
 def parse_metar(metar_data):
     lines = metar_data.split("\n")
@@ -89,12 +111,11 @@ def parse_metar(metar_data):
 
     observation_datetime = parse_timestamp(first_line)
     station = second_line[0]
-    wind_info = parse_wind(second_line[3])
-    temperature = parse_temperature(second_line[6])
+    wind_info, temp_info = parse_wind_and_temperature(second_line)
 
     return {
         "station": station,
         "last_observation": observation_datetime,
-        "temperature": temperature,
+        "temperature": temp_info,
         "wind": wind_info,
     }

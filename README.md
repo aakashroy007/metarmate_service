@@ -32,3 +32,17 @@ METARMate Service is a JSON web API built with FastAPI that provides the latest 
     ```bash
     curl "http://localhost:8080/metar/info?scode=KSGS&nocache=1"
 
+## Assumptions
+
+1. Response will be in the form:
+
+    ```
+    2001/11/17 15:38
+    KSGS 171538Z AUTO 19005KT 7SM CLR M01/M05 A3021 RMK AO2
+    ```
+2. Second line starts with the station.
+
+3. Wind info will end with "KT".
+
+4. Temperature info will contain "/".
+

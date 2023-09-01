@@ -1,9 +1,12 @@
 from fastapi import FastAPI, HTTPException
+import redis
 import httpx
 from bs4 import BeautifulSoup
 from datetime import datetime
 
 app = FastAPI()
+
+redis_client = redis.StrictRedis(host="localhost", port=6379, db=0)
 
 BASE_URL = "http://tgftp.nws.noaa.gov/data/observations/metar/stations/"
 
@@ -14,21 +17,30 @@ def ping():
 
 
 @app.get("/metar/info")
-async def get_metar_info(scode: str):
-    station_url = BASE_URL + scode.upper() + ".TXT"
+async def get_metar_info(scode: str, nocache: int = 0):
+    cached_data = redis_client.get(scode)
+    if not cached_data or nocache == 1:
+        station_url = BASE_URL + scode.upper() + ".TXT"
 
-    async with httpx.AsyncClient() as client:
-        response = await client.get(station_url, follow_redirects=True)
+        async with httpx.AsyncClient() as client:
+            response = await client.get(station_url, follow_redirects=True)
 
-        if response.status_code != 200:
-            raise HTTPException(
-                status_code=response.status_code, detail="Weather data not available"
-            )
+            if response.status_code != 200:
+                raise HTTPException(
+                    status_code=response.status_code,
+                    detail="Weather data not available",
+                )
 
-        metar_data = response.text
-        parsed_data = parse_metar(metar_data)
+            metar_data = response.text
+            parsed_data = parse_metar(metar_data)
+            parsed_data["source"] = "Live"
 
-        return {"data": parsed_data}
+            redis_client.setex(scode, 300, str(parsed_data))
+    else:
+        parsed_data = eval(cached_data)
+        parsed_data["source"] = "Cache"
+
+    return {"data": parsed_data}
 
 
 def parse_temperature(temperature_str):
@@ -81,26 +93,27 @@ def parse_timestamp(timestamp_str):
     formatted_timestamp = timestamp.strftime("%Y/%m/%d at %H:%M GMT")
     return formatted_timestamp
 
+
 def parse_wind_and_temperature(data_list):
     wind_info = None
     temperature_info = None
-    
+
     for line in data_list:
-        if line.endswith('KT'):
+        if line.endswith("KT"):
             wind_info = line
-        elif '/' in line:
+        elif "/" in line:
             temperature_info = line
-    
+
     if wind_info:
-        wind = parse_wind(wind_info) 
+        wind = parse_wind(wind_info)
     else:
         wind = "Wind data not available"
-    
+
     if temperature_info:
-        temperature = parse_temperature(temperature_info) 
+        temperature = parse_temperature(temperature_info)
     else:
         temperature = "Temperature data not available"
-    
+
     return wind, temperature
 
 

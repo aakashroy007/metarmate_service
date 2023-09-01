@@ -34,15 +34,21 @@ METARMate Service is a JSON web API built with FastAPI that provides the latest 
 
 ## Assumptions
 
-1. Response will be in the form:
+The following assumptions have been made in the development of the METARMate Service:
+
+1. **Response Format**: The response from METAR stations will be in the following format:
 
     ```
     2001/11/17 15:38
     KSGS 171538Z AUTO 19005KT 7SM CLR M01/M05 A3021 RMK AO2
     ```
-2. Second line starts with the station.
 
-3. Wind info will end with "KT".
+2. **Station Identifier**: It is assumed that the second line of the response will start with the station identifier.
 
-4. Temperature info will contain "/".
+3. **Wind Information**: Wind information in the response will end with the indicator "KT".
+
+4. **Temperature Information**: The temperature information in the response will contain a "/" character.
+
+These assumptions serve as a basis for parsing and processing the METAR data. Any deviations from these patterns may require adjustments to the parsing logic.
+
 
